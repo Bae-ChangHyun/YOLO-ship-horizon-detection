@@ -187,17 +187,10 @@ def inference_run(input_path, output_path, model_id, conf_threshold=0.5, iou_thr
                     y1_max = y1
                     y2_max = y2
                     x1_max = x1
-                    x2_max = x2
-                lines_list.append((x1, y1, x2, y2))
-                if len(lines_list) > 10:
-                    lines_list.pop(0)
-                cv2.line(lines_frame, pt1=(x1, y1), pt2=(x2, y2), color=(0, 255, 0), thickness=2)
-        else:
-            if len(lines_list) > 0:
-                avg_line = np.mean(lines_list, axis=0).astype(int)
-                x1, y1, x2, y2 = avg_line
-                cv2.line(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                    x2_max = x2      
+                if debug: cv2.line(lines_frame, pt1=(x1, y1), pt2=(x2, y2), color=(0, 255, 0), thickness=2)
                 
+        # SET THE HORIZON LINE    
         slope = -(y2_max - y1_max) / (x2_max - x1_max)
 
         y1_max = y1_max - slope * -x1_max
