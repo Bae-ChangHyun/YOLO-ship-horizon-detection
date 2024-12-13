@@ -160,7 +160,10 @@ def inference_run(input_path, output_path, model_id, conf_threshold=0.5, iou_thr
             
         ret, frame = cap.read() # input_video frame
         if not ret: break
+        
         boxes = model.predict(source=frame, conf=conf_threshold, iou=iou_threshhold, device='cuda:0')[0].boxes.xyxy.tolist()
+        
+        angle_diff, dist_diff = -1, -1
         
         display_frame = cv2.resize(frame, (display_xSize, display_ySize), interpolation=cv2.INTER_AREA) # frame for controls
         
@@ -206,13 +209,36 @@ def inference_run(input_path, output_path, model_id, conf_threshold=0.5, iou_thr
         x1_max = 0
         x2_max = display_xSize
         
-        cv2.line(display_frame, pt1=(x1_max, y1_max), pt2=(x2_max, y2_max), color=(0, 0, 255), thickness=2)
+        if lines is not None:
+            if len(lines_list) > 10: lines_list.pop(0) # 리스트에 10개 이상의 라인이 쌓이면 가장 오래된 라인을 삭제
+            lines_list.append((x1_max, y1_max, x2_max, y2_max)) # 현재 검출된 라인을 리스트에 추가
         
-        boxes = model.predict(source=frame, conf=conf_threshold, iou=iou_threshhold, device='cuda:0')[0].boxes.xyxy.tolist()
-        if debug:
-            cv2.line(frame, pt1=(int(x1_max * frame_width / display_xSize), int(y1_max * frame_height / display_ySize)), 
-                            pt2=(int(x2_max * frame_width / display_xSize), int(y2_max * frame_height / display_ySize)), 
-                            color=(0, 0, 255), thickness=2)
+        if len(lines_list) > 5:
+            last_line = lines_list.pop() # 가장 최근에 검출된 라인을 가져옴
+            avg_line = np.mean(lines_list, axis=0).astype(int) # 리스트에 있는 라인들의 평균값 계산
+            
+            angle_threshold = 7  # 각도 차이 임계값 설정 
+            dist_threshold = 50  # 유클리디안거리 임계값 설정 
+            
+            def calculate_slope(line):
+                x1, y1, x2, y2 = line
+                return (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else float('inf')
+            slope_avg = calculate_slope(avg_line)
+            slope_last = calculate_slope(last_line)
+            angle_diff = np.degrees(np.arctan(abs((slope_avg - slope_last) / (1 + slope_avg * slope_last)))) # 두 라인의 각도 차이 계산
+
+            dist_diff = np.linalg.norm(avg_line - last_line) # 두 라인의 유클리디안 거리 계산
+
+            if angle_diff > angle_threshold or dist_diff > dist_threshold:  cv2.line(display_frame, pt1=(x1_max, y1_max), pt2=(x2_max, y2_max), color=(0, 0, 255), thickness=1)
+            else: lines_list.append(last_line)
+            
+            if debug:
+                cv2.line(display_frame, pt1=(avg_line[0], avg_line[1]), pt2=(avg_line[2], avg_line[3]), color=(255, 255, 0), thickness=2)
+                cv2.putText(display_frame, f'angle diff: {angle_diff:.2f}, dist diff: {dist_diff:.2f}', (int((display_frame.shape[1] - 1) // 2),  int((display_frame.shape[0] - 1) // 2)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+                    
+        x1_max, y1_max, x2_max, y2_max = lines_list[-1]
+
+        if debug: cv2.line(display_frame, pt1=(x1_max, y1_max), pt2=(x2_max, y2_max), color=(255, 0, 0), thickness=1) # 최종 선정 라인
         
         # convert boxes to display frames size
         display_boxes = []
