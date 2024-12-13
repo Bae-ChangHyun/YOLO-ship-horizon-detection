@@ -91,13 +91,20 @@ def draw_boxes(frame, boxes, line, margin):
     """
     global debug
     if line is not None: 
-        line_top, line_bottom = line[1] - margin, line[3] + margin
+        x1, y1, x2, y2 = line
+        margin_vector = np.array([-(y2 - y1), x2 - x1])
+        margin_vector = margin_vector / np.linalg.norm(margin_vector) * margin
+
+        line_top = (int(x1 - margin_vector[0]), int(y1 - margin_vector[1]), int(x2 - margin_vector[0]), int(y2 - margin_vector[1]))
+        line_bottom = (int(x1 + margin_vector[0]), int(y1 + margin_vector[1]), int(x2 + margin_vector[0]), int(y2 + margin_vector[1]))
+
         if debug: 
-            cv2.line(frame, (line[0], line_top), (line[2], line_top), (0, 165, 255), 2)         # lines upper range
-            cv2.line(frame, (0, line_bottom), (frame.shape[1], line_bottom), (0, 165, 255), 2)  # lines lower range
+            cv2.line(frame, (line_top[0], line_top[1]), (line_top[2], line_top[3]), (0, 165, 255), 2)         # lines upper range
+            cv2.line(frame, (line_bottom[0], line_bottom[1]), (line_bottom[2], line_bottom[3]), (0, 165, 255), 2)  # lines lower range
+
         for i, box in enumerate(boxes):
             x1, y1, x2, y2 = map(int, box)
-            if y1 >= line_top and y2 <= line_bottom:
+            if y1 >= line_top[1] and y2 <= line_bottom[1]:
                 color = (255, 0, 0)                                                             # if box is in the lines range, shows blue
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 4)
             else:
