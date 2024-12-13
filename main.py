@@ -249,20 +249,16 @@ def inference_run(input_path, output_path, model_id, conf_threshold=0.5, iou_thr
             x2 = int(x2 * display_xSize / frame_width)
             y2 = int(y2 * display_ySize / frame_height)
             display_boxes.append([x1, y1, x2, y2])
-        
-        # draw boxes on the main frame
-        frame = draw_boxes(frame, boxes, (int(x1_max * frame_width / display_xSize), int(y1_max * frame_height / display_ySize), int(x2_max * frame_width / display_xSize), int(y2_max * frame_height / display_ySize)), margin)
-        
-        # draw boxes on the display frame
-        if debug: 
-            display_frame = draw_boxes(display_frame, display_boxes, (x1_max, y1_max, x2_max, y2_max), margin)
-            cv2.imshow('Display frame', display_frame)
-            cv2.imshow('lines', lines_frame)
-            #cv2.imshow('Origin', frame)
+           
+        display_frame = draw_boxes(display_frame, display_boxes, (x1_max, y1_max, x2_max, y2_max), margin)    
+        cv2.imshow('Display frame', display_frame)
+        if debug: cv2.imshow('lines', lines_frame)
         
         if cv2.waitKey(10) == 27: break
 
-        if save:out.write(frame)
+        if save:
+            display_frame = cv2.resize(display_frame,(frame_width, frame_height), interpolation=cv2.INTER_AREA) 
+            out.write(display_frame)
 
         processed_frames += 1
         print(f"Total frames: {total_frames}, Processed frames: {processed_frames}")
