@@ -160,6 +160,7 @@ def inference_run(input_path, output_path, model_id, conf_threshold=0.5, iou_thr
             
         ret, frame = cap.read() # input_video frame
         if not ret: break
+        boxes = model.predict(source=frame, conf=conf_threshold, iou=iou_threshhold, device='cuda:0')[0].boxes.xyxy.tolist()
         
         display_frame = cv2.resize(frame, (display_xSize, display_ySize), interpolation=cv2.INTER_AREA) # frame for controls
         
